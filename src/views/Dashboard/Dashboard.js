@@ -1,4 +1,5 @@
 import React, { Component, lazy, Suspense } from 'react';
+import {OutTable, ExcelRenderer} from 'react-excel-renderer';
 import { Bar, Line } from 'react-chartjs-2';
 import {
   Badge,
@@ -22,6 +23,11 @@ import {
 } from 'reactstrap';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 import { getStyle, hexToRgba } from '@coreui/coreui/dist/js/coreui-utilities'
+
+const { createApolloFetch } = require('apollo-fetch');
+const fetchUri = createApolloFetch({
+  uri: 'http://localhost:4000/graphql',
+});
 
 const Widget03 = lazy(() => import('../../views/Widgets/Widget03'));
 
@@ -451,6 +457,14 @@ const mainChartOpts = {
     },
   },
 };
+function JsonToArray(json) { 
+    var arr = [];
+    Object.keys(json).forEach(function(key) {
+      arr.push(json[key]);
+    });
+     
+    return arr;
+} 
 
 class Dashboard extends Component {
   constructor(props) {
@@ -463,6 +477,9 @@ class Dashboard extends Component {
       dropdownOpen: false,
       radioSelected: 2,
     };
+  }
+  componentDidMount() {
+     this.loadData();
   }
 
   toggle() {
@@ -479,11 +496,41 @@ class Dashboard extends Component {
 
   loading = () => <div className="animated fadeIn pt-1 text-center">Loading...</div>
 
+  loadData() {
+    fetchUri({
+      query: '{ posts { title }}',
+    }).then(res => {
+       this.setState({posts:JsonToArray(res.data.posts)})       
+    }); 
+  } 
+
+  fileHandler = (event) => {
+    let fileObj = event.target.files[0];
+    //just pass the fileObj as parameter
+    ExcelRenderer(fileObj, (err, resp) => {
+      console.log(resp.rows)
+      if(err){
+        console.log(err);            
+      }
+      else{
+        this.setState({
+          cols: resp.cols,
+          rows: resp.rows
+        });
+      }
+    });               
+  }
+  
   render() {
 
     return (
-      <div className="animated fadeIn">
+
+      <div className="animated fadeIn"> 
+      
+      <input type="file" class = "btn btn-primary" onChange={this.fileHandler.bind(this)} style={{"padding":"10px"}} />
+      {/* <OutTable data={this.state.rows} columns={this.state.cols} tableClassName="ExcelTable2007" tableHeaderRowClass="heading" /> */}
         <Row>
+        
           <Col xs="12" sm="6" lg="3">
             <Card className="text-white bg-info">
               <CardBody className="pb-0">
